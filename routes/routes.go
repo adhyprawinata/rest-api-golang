@@ -3,12 +3,21 @@ package routes
 import (
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"rest-api/controllers"
+	"rest-api/utils"
 )
 
 func SetupRoutes() http.Handler {
+	router := mux.NewRouter()
 
-	http.HandleFunc("/users", controllers.GetAllUsers)
+	router.Use(utils.CheckAPIKey)
+	router.NotFoundHandler = http.HandlerFunc(utils.NotFoundHandler)
 
-	return http.DefaultServeMux
+	router.Use(utils.Logging) // Tambahkan middleware pencatatan
+
+	router.HandleFunc("/users", controllers.GetAllUsers).Methods("GET")
+
+	return router
 }

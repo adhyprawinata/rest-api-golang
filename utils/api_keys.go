@@ -1,37 +1,26 @@
 package utils
 
 import (
-	"encoding/json"
 	"net/http"
 )
 
-const (
-	APIKeyHeader = "X-API-Key"
-	ValidAPIKey  = "CIMBNiaga"
-)
+func CheckAPIKey(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("x-api-key")
+		expectedAPIKey := "CIMBNiaga" // Ganti dengan API key yang valid
 
-type ErrorResponse struct {
-	Message string `json:"message"`
-}
+		// Memeriksa keberadaan dan kevalidan API key
+		if apiKey == "" || apiKey != expectedAPIKey {
+			response := Response{
+				Status:  http.StatusUnauthorized,
+				Message: "Unauthorized",
+				Data:    nil,
+			}
+			SendJSONResponse(w, response, http.StatusUnauthorized)
+			return
+		}
 
-func (e ErrorResponse) Error() string {
-	return e.Message
-}
-
-var (
-	ErrInvalidAPIKey = ErrorResponse{Message: "Invalid API Key"}
-)
-
-func ValidateAPIKey(r *http.Request) error {
-	apiKey := r.Header.Get(APIKeyHeader)
-	if apiKey != ValidAPIKey {
-		return ErrInvalidAPIKey
-	}
-	return nil
-}
-
-func WriteJSONResponse(w http.ResponseWriter, statusCode int, response interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(response)
+		// Lanjutkan ke handler selanjutnya jika API key valid
+		next.ServeHTTP(w, r)
+	})
 }

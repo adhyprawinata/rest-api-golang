@@ -1,23 +1,15 @@
 package controllers
 
 import (
-	"database/sql"
-	"encoding/json"
 	"log"
 	"net/http"
 
-	"rest-api/config"
-	"rest-api/models"
+	"rest-api/utils"
 )
 
 func GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	// Membuka koneksi ke database
-	db, err := sql.Open("mysql", config.DBUsername+":"+config.DBPassword+"@tcp("+config.DBHost+":"+config.DBPort+")/"+config.DBName)
+	db, err := utils.OpenDB()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -31,19 +23,28 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	// Membaca hasil query dan menyimpannya dalam slice pengguna (users)
-	var users []models.User
+	var users []map[string]interface{}
 	for rows.Next() {
-		var user models.User
-		if err := rows.Scan(&user.Username, &user.Password); err != nil {
+		var username, password string
+		if err := rows.Scan(&username, &password); err != nil {
 			log.Fatal(err)
+		}
+		user := map[string]interface{}{
+			"username": username,
+			"password": password,
 		}
 		users = append(users, user)
 	}
+
 	if err := rows.Err(); err != nil {
 		log.Fatal(err)
 	}
 
 	// Mengirim respon JSON dengan pengguna yang ditemukan
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	utils.SendJSONResponse(w, utils.Response{
+		Status:  http.StatusOK,
+		Message: "Successfully",
+		Data:    users,
+	}, http.StatusOK)
+	return
 }
